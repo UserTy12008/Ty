@@ -24,244 +24,12 @@ local window = library:AddWindow(title, {
     can_resize = true,
 })
 
-local MainTab = window:AddTab("Misc")
-MainTab:AddLabel("Important:").TextSize = 22
-
-local antiKnockbackSwitch =
-    MainTab:AddSwitch(
-    "Anti Fling",
-    function(bool)
-        if bool then
-            local playerName = game.Players.LocalPlayer.Name
-            local character = game.Workspace:FindFirstChild(playerName)
-            if character then
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart then
-                    local bodyVelocity = Instance.new("BodyVelocity")
-                    bodyVelocity.MaxForce = Vector3.new(100000, 0, 100000)
-                    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-                    bodyVelocity.P = 1250
-                    bodyVelocity.Parent = rootPart
-                end
-            end
-        else
-            local playerName = game.Players.LocalPlayer.Name
-            local character = game.Workspace:FindFirstChild(playerName)
-            if character then
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart then
-                    local existingVelocity = rootPart:FindFirstChild("BodyVelocity")
-                    if existingVelocity and existingVelocity.MaxForce == Vector3.new(100000, 0, 100000) then
-                        existingVelocity:Destroy()
-                    end
-                end
-            end
-        end
-    end
-)
-antiKnockbackSwitch:Set(true)
-
-local lockRunning = false
-local lockConnection
-
-local lockSwitch = MainTab:AddSwitch("Lock Position", function(Value)
-    local player = game.Players.LocalPlayer
-
-    if Value then
-        lockRunning = true
-        lockConnection = game:GetService("RunService").Heartbeat:Connect(function()
-            local char = player.Character
-            if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then return end
-
-            local hrp = char.HumanoidRootPart
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-
-            if not humanoid or not hrp then return end
-
-            if not humanoid:FindFirstChild("LockState") then
-                humanoid.WalkSpeed = 0
-                humanoid.JumpPower = 0
-                humanoid.AutoRotate = false
-                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-                local marker = Instance.new("BoolValue", humanoid)
-                marker.Name = "LockState"
-                marker.Value = true
-                humanoid:SetAttribute("LockCFrame", hrp.CFrame)
-            end
-
-            local savedCFrame = humanoid:GetAttribute("LockCFrame")
-            if savedCFrame then
-                hrp.Velocity = Vector3.zero
-                hrp.RotVelocity = Vector3.zero
-                hrp.CFrame = savedCFrame
-            end
-        end)
-    else
-        lockRunning = false
-        if lockConnection then
-            lockConnection:Disconnect()
-            lockConnection = nil
-        end
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = 250
-                humanoid.JumpPower = 50
-                humanoid.AutoRotate = true
-                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-                if humanoid:FindFirstChild("LockState") then
-                    humanoid.LockState:Destroy()
-                end
-                humanoid:SetAttribute("LockCFrame", nil)
-            end
-        end
-    end
-end)
-
-lockSwitch:Set(false)
-
-
-local showpetsswitch =
-    MainTab:AddSwitch(
-    "Show Pets",
-    function(bool)
-        local player = game:GetService("Players").LocalPlayer
-        if player:FindFirstChild("hidePets") then
-            player.hidePets.Value = bool
-        end
-    end
-)
-showpetsswitch:Set(false)
-
-local showotherpetsswitch =
-    MainTab:AddSwitch(
-    "Show Other Pets",
-    function(bool)
-        local player = game:GetService("Players").LocalPlayer
-        if player:FindFirstChild("showOtherPetsOn") then
-            player.showOtherPetsOn.Value = bool
-        end
-    end
-)
-showotherpetsswitch:Set(false)
-
-MainTab:AddLabel("Misc:").TextSize = 22
-
-MainTab:AddSwitch(
-    "Infinite Jump",
-    function(bool)
-        _G.InfiniteJump = bool
-
-        if bool then
-            local InfiniteJumpConnection
-            InfiniteJumpConnection =
-                game:GetService("UserInputService").JumpRequest:Connect(
-                function()
-                    if _G.InfiniteJump then
-                        game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(
-                            "Jumping"
-                        )
-                    else
-                        InfiniteJumpConnection:Disconnect()
-                    end
-                end
-            )
-        end
-    end
-)
-
-local parts = {}
-local partSize = 2048
-local totalDistance = 50000
-local startPosition = Vector3.new(-2, -9.5, -2)
-
-local function createAllParts()
-    local numberOfParts = math.ceil(totalDistance / partSize)
-
-    for x = 0, numberOfParts - 1 do
-        for z = 0, numberOfParts - 1 do
-            local function createPart(pos, name)
-                local part = Instance.new("Part")
-                part.Size = Vector3.new(partSize, 1, partSize)
-                part.Position = pos
-                part.Anchored = true
-                part.Transparency = 1
-                part.CanCollide = true
-                part.Name = name
-                part.Parent = workspace
-                return part
-            end
-
-            table.insert(
-                parts,
-                createPart(startPosition + Vector3.new(x * partSize, 0, z * partSize), "Part_Side_" .. x .. "_" .. z)
-            )
-            table.insert(
-                parts,
-                createPart(
-                    startPosition + Vector3.new(-x * partSize, 0, z * partSize),
-                    "Part_LeftRight_" .. x .. "_" .. z
-                )
-            )
-            table.insert(
-                parts,
-                createPart(
-                    startPosition + Vector3.new(-x * partSize, 0, -z * partSize),
-                    "Part_UpLeft_" .. x .. "_" .. z
-                )
-            )
-            table.insert(
-                parts,
-                createPart(
-                    startPosition + Vector3.new(x * partSize, 0, -z * partSize),
-                    "Part_UpRight_" .. x .. "_" .. z
-                )
-            )
-        end
-    end
-end
-task.spawn(createAllParts)
-
-local walkonwaterSwicth =
-    MainTab:AddSwitch(
-    "Walk on Water",
-    function(bool)
-        for _, part in ipairs(parts) do
-            if part and part.Parent then
-                part.CanCollide = bool
-            end
-        end
-    end
-)
-walkonwaterSwicth:Set(true)
-
-local timeDropdown =
-    MainTab:AddDropdown(
-    "Change Time",
-    function(selection)
-        local lighting = game:GetService("Lighting")
-
-        if selection == "Night" then
-            lighting.ClockTime = 0
-        elseif selection == "Day" then
-            lighting.ClockTime = 12
-        elseif selection == "Midnight" then
-            lighting.ClockTime = 6
-        end
-    end
-)
-
-timeDropdown:Add("Night")
-timeDropdown:Add("Day")
-timeDropdown:Add("Midnight")
-
-local AutoFarm = window:AddTab("Farm Op")
+local AutoFarm = window:AddTab("Farm")
 
 
 getgenv()._AutoRepFarmEnabled = false  
 
-AutoFarm:AddSwitch("Strength Op", function(state)
+AutoFarm:AddSwitch("Auto Fuerza", function(state)
     getgenv()._AutoRepFarmEnabled = state
     warn("[Auto Rep Farm] Estado cambiado a:", state and "ON" or "OFF")
 end)
@@ -340,12 +108,12 @@ task.spawn(function()
     end
 end)
 
-AutoFarm:AddSwitch("Auto Eat Egg 30 Minuts", function(state)
+AutoFarm:AddSwitch("Auto Egg", function(state)
     autoEatEnabled = state
 end)
 
 
-    AutoFarm:AddSwitch("Spin Fortune Wheel", function(state)
+    AutoFarm:AddSwitch("Spin rule", function(state)
     _G.AutoSpinWheel = state
 
     if state then
@@ -359,7 +127,7 @@ end)
         end)
     end
 end)
-AutoFarm:AddSwitch("Hide All Frames", function(state)
+AutoFarm:AddSwitch("Ocultar partículas", function(state)
     local rSto = game:GetService("ReplicatedStorage")
 
     for _, obj in pairs(rSto:GetDescendants()) do
@@ -431,7 +199,7 @@ AutoFarm:AddButton("Anti Lag", function()
         Duration = 5
     })
 end)
-AutoFarm:AddButton("Full Optimization", function()
+AutoFarm:AddButton("Full Black", function()
     local player = game.Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui")
     local lighting = game:GetService("Lighting")
@@ -502,63 +270,6 @@ AutoFarm:AddButton("Full Optimization", function()
     removeParticleEffects()
     removeLightSources()
     darkenSky()
-end)
-
-
-AutoFarm:AddButton("Equip Swift Samurai", function()
-    print("Botón presionado: equipando 8 Swift Samurai")
-
-    local LocalPlayer = game:GetService("Players").LocalPlayer
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-    -- Primero desequipamos todo
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
-    if not petsFolder then return end
-
-    for _, folder in pairs(petsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, pet in pairs(folder:GetChildren()) do
-                ReplicatedStorage.rEvents.equipPetEvent:FireServer("unequipPet", pet)
-            end
-        end
-    end
-    task.wait(0.1)
-
-    -- Ahora equipamos máximo 8 "Swift Samurai"
-    local equipped = 0
-    local maxEquip = 8
-    for _, folder in pairs(petsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, pet in pairs(folder:GetChildren()) do
-                if pet.Name == "Swift Samurai" then
-                    ReplicatedStorage.rEvents.equipPetEvent:FireServer("equipPet", pet)
-                    equipped += 1
-                    print("Equipado Swift Samurai #" .. equipped)
-
-                    if equipped >= maxEquip then
-                        return -- salir cuando ya haya 8 equipados
-                    end
-                end
-            end
-        end
-    end
-
-    print("Se equiparon " .. equipped .. " Swift Samurai")
-end)
-
-
-AutoFarm:AddButton("Jungle Squat", function()
-    local player = game.Players.LocalPlayer
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-
-    hrp.CFrame = CFrame.new(-8371.4336, 6.7981, 2858.8853)
-    task.wait(0.2)
-
-    local VirtualInputManager = game:GetService("VirtualInputManager")
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-    task.wait(0.05)
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 end)
 
 AutoFarm:AddButton("Jungle lift", function()
