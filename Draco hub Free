@@ -3312,3 +3312,13 @@ Gift:AddSwitch(" Auto Eat Everything", function(state)
         eatConnection = nil
     end
 end)
+local Credits = window:AddTab("Credits")
+
+Credits:AddLabel("paid version Public: Draco hub ")
+Credits:AddLabel("Script Made by username:")
+Credits:AddLabel("Fresade80")
+Credits:AddLabel("I hope you like the script, for bugs or suggestions on my discord server")
+Credits:AddLabel("Discord Server:")
+Credits:AddButton("Copy Link", function()
+setclipboard("https://discord.gg/KqyQwQ4c")
+        end)
