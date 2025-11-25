@@ -1245,166 +1245,179 @@ task.spawn(function()
         updateStats(selectedPlayer)
     end
 end)
-local teleport = window:AddTab("Teleport")
+local MusicTab = window:AddTab("Music")
 
-teleport:AddButton("Spawn", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(2, 8, 115)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Spawn",
-        Duration = 0
-    })
+local MP3_URL = ""
+local Playlist = {}
+local currentIndex = 0
+local isPaused = false
+local fileName = "GenesisPlaylist_"..player.Name..".txt"
+local tempIndex = 0
+local currentSound = nil
+
+if isfile(fileName) then
+	local data = readfile(fileName)
+	for url in string.gmatch(data, "[^,]+") do
+		table.insert(Playlist, url)
+	end
+else
+	writefile(fileName, "")
+end
+
+local function savePlaylist()
+	writefile(fileName, table.concat(Playlist, ","))
+end
+
+local function formatTime(sec)
+	sec = math.floor(sec or 0)
+	local m = math.floor(sec / 60)
+	local s = sec % 60
+	return string.format("%02d:%02d", m, s)
+end
+
+local TimeLabel = MusicTab:AddLabel("⏱️ 00:00 / 00:00")
+
+local function loadMP3(url)
+	if url == "" then return end
+	tempIndex = tempIndex + 1
+	local tempFile = "GenesisMusic_"..tempIndex..".mp3"
+
+	pcall(function()
+		if isfile(tempFile) then delfile(tempFile) end
+		writefile(tempFile, game:HttpGet(url))
+	end)
+
+	if currentSound then
+		currentSound:Destroy()
+	end
+
+	currentSound = Instance.new("Sound")
+	currentSound.Name = "GenesisMP3Sound"
+	currentSound.Parent = SoundService
+	currentSound.SoundId = getcustomasset(tempFile)
+	currentSound.Volume = 1
+	currentSound.Looped = false
+	currentSound:Play()
+	isPaused = false
+
+	-- Cuando termina la canción, pasa a la siguiente
+	currentSound.Ended:Connect(function()
+		if not currentSound.Looped and not isPaused then
+			currentIndex = currentIndex + 1
+			if currentIndex > #Playlist then currentIndex = 1 end
+			loadMP3(Playlist[currentIndex])
+		end
+	end)
+end
+
+-- Bucle de actualización de tiempo
+task.spawn(function()
+	while task.wait(0.1) do
+		if currentSound and currentSound:IsDescendantOf(SoundService) and currentSound.IsLoaded then
+			TimeLabel.Text = "⏱️ " .. formatTime(currentSound.TimePosition) .. " / " .. formatTime(currentSound.TimeLength)
+
+			-- Respaldo por si el evento Ended falla
+			if not currentSound.IsPlaying and not isPaused and currentSound.TimePosition > 0 and currentSound.TimePosition >= currentSound.TimeLength - 0.2 then
+				currentIndex = currentIndex + 1
+				if currentIndex > #Playlist then currentIndex = 1 end
+				loadMP3(Playlist[currentIndex])
+			end
+		end
+	end
 end)
 
-teleport:AddButton("Secret Area", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(1947, 2, 6191)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Secret Area",
-        Duration = 0
-    })
+-- Controles
+MusicTab:AddTextBox(" MP3 URL", function(val)
+	MP3_URL = val
+end, {["clear"] = false})
+
+MusicTab:AddButton("Play", function()
+	if MP3_URL ~= "" then
+		loadMP3(MP3_URL)
+	end
 end)
 
-teleport:AddButton("Tiny Island", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(-34, 7, 1903)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Tiny Island",
-        Duration = 0
-    })
+MusicTab:AddButton("Continue", function()
+	if currentSound then
+		if isPaused then
+			isPaused = false
+			currentSound:Resume()
+		else
+			currentSound:Play()
+		end
+	end
 end)
 
-teleport:AddButton("Frozen Island", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(- 2600.00244, 3.67686558, - 403.884369, 0.0873617008, 1.0482899e-09, 0.99617666, 3.07204253e-08, 1, - 3.7464023e-09, - 0.99617666, 3.09302628e-08, 0.0873617008)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Frozen Island",
-        Duration = 0
-    })
+MusicTab:AddButton("Pause", function()
+	if currentSound and currentSound.IsPlaying then
+		currentSound:Pause()
+		isPaused = true
+	end
 end)
 
-teleport:AddButton("Mythical Island", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(2255, 7, 1071)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Mythical Island",
-        Duration = 0
-    })
+MusicTab:AddButton("Stop", function()
+	if currentSound then
+		currentSound:Stop()
+		isPaused = false
+	end
 end)
 
-teleport:AddButton("Hell Island", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(-6768, 7, -1287)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Hell Island",
-        Duration = 0
-    })
+MusicTab:AddTextBox("Volumen (0-5)", function(val)
+	if currentSound then
+		local num = tonumber(val)
+		if num then
+			currentSound.Volume = math.clamp(num, 0, 5)
+		end
+	end
+end, {["clear"] = false})
+
+MusicTab:AddButton("Toggle Loop", function()
+	if currentSound then
+		currentSound.Looped = not currentSound.Looped
+	end
 end)
 
-teleport:AddButton("Legend Island", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(4604, 991, -3887)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Legend Island",
-        Duration = 0
-    })
+MusicTab:AddButton("Add to Playlist", function()
+	if MP3_URL ~= "" then
+		tempIndex = tempIndex + 1
+		local tempFile = "GenesisMusic_"..tempIndex..".mp3"
+		pcall(function()
+			if isfile(tempFile) then delfile(tempFile) end
+			writefile(tempFile, game:HttpGet(MP3_URL))
+		end)
+		table.insert(Playlist, MP3_URL)
+		savePlaylist()
+	end
 end)
 
-teleport:AddButton("Muscle King Island", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(-8646, 17, -5738)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Muscle King",
-        Duration = 0
-    })
+MusicTab:AddButton("Play Playlist", function()
+	if #Playlist > 0 then
+		currentIndex = 1
+		loadMP3(Playlist[currentIndex])
+	end
 end)
 
-teleport:AddButton("Jungle Island", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(-8659, 6, 2384)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Jungle Island",
-        Duration = 0
-    })
+MusicTab:AddButton("Next", function()
+	if #Playlist > 0 then
+		currentIndex = currentIndex + 1
+		if currentIndex > #Playlist then currentIndex = 1 end
+		loadMP3(Playlist[currentIndex])
+	end
 end)
 
-teleport:AddButton("Brawl Lava", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(4471, 119, -8836)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Brawl Lava",
-        Duration = 0
-    })
+MusicTab:AddButton("Previous", function()
+	if #Playlist > 0 then
+		currentIndex = currentIndex - 1
+		if currentIndex < 1 then currentIndex = #Playlist end
+		loadMP3(Playlist[currentIndex])
+	end
 end)
 
-teleport:AddButton("Brawl Desert", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(960, 17, -7398)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Brawl Desert",
-        Duration = 0
-    })
+MusicTab:AddButton("Clear Playlist", function()
+	Playlist = {}
+	savePlaylist()
+	currentIndex = 0
 end)
-
-teleport:AddButton("Brawl Regular", function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    humanoidRootPart.CFrame = CFrame.new(-1849, 20, -6335)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Teletransporte",
-        Text = "Teleported to Brawl Regular",
-        Duration = 0
-    })
-end)
-
-
-
 local Calculadora = window:AddTab("calculator", Color3.fromRGB(200, 100, 100))
 
 local baseStrength = 0
